@@ -1,0 +1,71 @@
+service: testproject
+
+frameworkVersion: "3"
+
+plugins:
+  - serverless-plugin-scripts
+  - serverless-offline
+
+package:
+  individually: true # Enables individual packaging for each function. If true you must provide package for each function. Defaults to false
+  excludeDevDependencies: true # Config if Serverless should automatically exclude dev dependencies in the deployment package. Defaults to true
+  patterns: # Specify the directories and files which should be included in the deployment package
+    - "!./**"
+    - node_modules/**
+    - "!node_modules/aws-sdk/**"
+    - "!node_modules/**/node_modules/aws-sdk/**"
+
+custom:
+  # scripts:
+  #   hooks:
+  #     "before:package:createDeploymentArtifacts": npm run build
+
+  projectName: testproject
+  stage: ${opt:stage, "dev"}
+  region: ${opt:region, "eu-west-1"}
+
+  cfTags:
+    - Key: CreatedBy
+      Value: "richard.loan3231@gmail.com"
+    - Key: Project
+      Value: ${self:custom.projectName}
+    - Key: ProjectEnvironment
+      Value: ${self:custom.stage}
+
+  slsTags:
+    CreatedBy: "richard.loan3231@gmail.com"
+    Project: ${self:custom.projectName}
+    ProjectEnvironment: ${self:custom.stage}
+
+  serverless-offline:
+    httpPort: 4000
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  stage: ${self:custom.stage}
+  # profile: bd-stg # profile is only used for local testing
+  region: ${self:custom.region}
+  timeout: 60
+  memorySize: 256
+  versionFunctions: false
+
+functions:
+  test:
+    name: ${self:custom.projectName}-test-${self:custom.stage} # Deployed Lambda name
+    description: test Check
+    handler: build/handler.handler
+    tags: ${self:custom.slsTags}
+    timeout: 30
+    memorySize: 512
+    package:
+      patterns:
+        - "build/config/**"
+        - "build/lib/**"
+        - "build/**"
+    events:
+      - http:
+          method: Post
+          path: /test/
+          private: false
+          cors: true
